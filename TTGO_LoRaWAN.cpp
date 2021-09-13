@@ -148,23 +148,21 @@ void TTGO_LoRaWAN::_saveLmicData(int sleepTimeInSeconds) {
     #endif
 
     rtcDataLmic = LMIC;
-
-    // ESP32 can't track millis during DeepSleep and no option to advanced millis after DeepSleep.
-    // Therefore reset DutyCyles
-    unsigned long now = millis();
+    unsigned long wakeUpTime = millis() / 1000.0 + sleepTimeInSeconds;
+    ostime_t wakeUpTicks = sec2osticks(wakeUpTime);
 
     for (int i = 0; i < MAX_BANDS; i++) {
         #if SERIAL_DEBUG_ENABLED
             DEBUG_PRINT("Band last channel %i, avail %ld", rtcDataLmic.bands[i].lastchnl, rtcDataLmic.bands[i].avail)
         #endif
-        ostime_t correctedAvail = rtcDataLmic.bands[i].avail - ((now / 1000.0 + sleepTimeInSeconds) * OSTICKS_PER_SEC);
+        ostime_t correctedAvail = rtcDataLmic.bands[i].avail - wakeUpTicks;
         if (correctedAvail < 0) {
             correctedAvail = 0;
         }
         rtcDataLmic.bands[i].avail = correctedAvail;
     }
 
-    rtcDataLmic.globalDutyAvail = rtcDataLmic.globalDutyAvail - ((now / 1000.0 + sleepTimeInSeconds) * OSTICKS_PER_SEC);
+    rtcDataLmic.globalDutyAvail = rtcDataLmic.globalDutyAvail - wakeUpTicks;
     if (rtcDataLmic.globalDutyAvail < 0) {
         rtcDataLmic.globalDutyAvail = 0;
     }
